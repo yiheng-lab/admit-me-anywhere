@@ -12,7 +12,7 @@
 
 GitHub Pages:
 
-https://YOUR_USERNAME.github.io/admit-me-anywhere/
+https://yiheng-lab.github.io/admit-me-anywhere/
 
 ## Features
 
