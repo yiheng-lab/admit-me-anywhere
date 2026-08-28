@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admit Me Anywhere</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --line:#e7eaee; --text:#20242a; --muted:#8a929c;
+    --blue:#2e9fe8; --blue2:#63bdf2; --soft:#eaf6fe; --green:#2aa77d;
+    --sidebar-width:360px;
+  }
+  html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,
+  "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
+  button,input,textarea{font:inherit}
+  .app{position:relative;display:grid;grid-template-columns:var(--sidebar-width) minmax(0,1fr);height:100vh;overflow:hidden}
+
+  /* left */
+  .sidebar{background:#fbfbfc;border-right:1px solid var(--line);overflow:auto;padding:20px 18px}
+  .sidebar-resizer{
+    position:absolute;z-index:20;top:0;bottom:0;left:var(--sidebar-width);width:10px;
+    transform:translateX(-50%);cursor:col-resize;touch-action:none;outline:none
+  }
+  .sidebar-resizer::before{
+    content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;transform:translateX(-50%);
+    background:var(--line);transition:background .15s,width .15s
+  }
+  .sidebar-resizer:hover::before,.sidebar-resizer:focus-visible::before,.app.is-resizing .sidebar-resizer::before{
+    width:3px;background:var(--blue)
+  }
+  .app.is-resizing{cursor:col-resize}
+  .app.is-resizing *{user-select:none}
+  .brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .brand-main{font-weight:800;font-size:20px;letter-spacing:-.02em}
+  .brand-sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .pill{font-size:11px;padding:4px 8px;border:1px solid #d9dde3;border-radius:999px;color:#6e7680;background:#fff}
+  .notice{padding:11px 12px;border-radius:10px;background:#fff5f0;border:1px solid #f1d7cc;color:#8a503c;
+    font-size:12px;line-height:1.55;margin-bottom:18px}
+  .section{margin:18px 0 24px}
+  .section h3{font-size:11px;letter-spacing:.12em;color:#737b85;margin:0 0 10px;text-transform:uppercase}
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:12px;font-weight:700;color:#555d66;margin-bottom:5px}
+  .field input,.field textarea{
+    width:100%;border:1px solid #dfe4ea;border-radius:8px;background:#fff;padding:9px 10px;outline:none;
+    transition:.15s;border-color .15s, box-shadow .15s
+  }
+  .field textarea{resize:vertical;min-height:70px}
+  .field input:focus,.field textarea:focus{border-color:#91c9ef;box-shadow:0 0 0 3px rgba(46,159,232,.10)}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .actions{position:sticky;bottom:0;background:linear-gradient(transparent,#fbfbfc 24%);padding-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .btn{border:0;border-radius:9px;padding:10px 12px;font-weight:750;cursor:pointer}
+  .btn.secondary{background:#eceff3;color:#434a52}.btn.primary{background:#2f9de6;color:#fff}
+  .footnote{font-size:11px;color:#969da6;line-height:1.55;margin-top:10px}
+
+  /* right */
+  .workspace{min-width:0;background:
+    linear-gradient(#eceff3 1px,transparent 1px),
+    linear-gradient(90deg,#eceff3 1px,transparent 1px),#f7f8fa;background-size:24px 24px;overflow:auto}
+  .toolbar{height:64px;position:sticky;top:0;z-index:5;background:rgba(255,255,255,.94);
+    border-bottom:1px solid var(--line);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+  .toolbar .kicker{font-size:10px;letter-spacing:.15em;color:#7e8790;font-weight:800}
+  .toolbar .hint{font-size:12px;color:#9aa1a9;margin-top:4px}
+  .zoom{font-size:12px;color:#8c949c;display:flex;align-items:center;gap:5px}
+  .zoom-reset{
+    border:1px solid #d8e0e7;border-radius:7px;background:#fff;color:#6f7a84;padding:4px 8px;
+    font-size:11px;font-weight:800;letter-spacing:.04em;cursor:pointer;transition:.15s
+  }
+  .zoom-reset:hover{border-color:#91c9ef;color:var(--blue);background:var(--soft)}
+  .zoom-reset:focus-visible{outline:2px solid rgba(46,159,232,.28);outline-offset:2px}
+  .zoom-reset:active{transform:translateY(1px)}
+  .stage{
+    padding:54px 46px 90px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    min-width:0;
+    overflow:hidden;
+  }
+  .sheet-wrap{
+    position:relative;
+    flex:0 0 auto;
+  }
+  .sheet{
+    width:1080px;
+    min-width:1080px;
+    background:white;
+    padding:16px;
+    box-shadow:0 18px 55px rgba(38,47,56,.12);
+    border:1px solid #edf0f2;
+    transform-origin:top left;
+    will-change:transform;
+  }
+
+  .hero{position:relative;min-height:334px;border-radius:13px;overflow:hidden;padding:0 30px 28px;
+    background:linear-gradient(180deg,#e9f6fe 0%,#eef8fe 100%)}
+  .trapezoid-wrap{
+    position:relative;z-index:2;height:62px;display:flex;justify-content:center
+  }
+  .trapezoid-svg{
+    display:block;margin:0;width:225px;height:62px;overflow:visible
+  }
+  .trapezoid-svg text{
+    fill:#fff;font-size:24px;font-weight:800;text-anchor:middle;dominant-baseline:middle;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif
+  }
+  .score{position:relative;z-index:2;margin-top:28px;text-align:center;color:#248cca;font-size:19px}
+  .score b{font-weight:800}.score-name{display:inline-block;margin-right:14px;font-weight:700;color:#248cca}
+  .sep{height:1px;background:rgba(127,187,221,.18);margin:25px 0 29px;position:relative;z-index:2}
+  .headrow{position:relative;z-index:2;display:flex;gap:10px;align-items:baseline;font-size:20px}
+  .headrow .school{font-weight:600}.headrow .time{font-size:15px;color:#99a2aa}
+  .msg{position:relative;z-index:2;margin-top:27px;font-size:20px;line-height:1.6}
+  .accepted{position:relative;z-index:2;margin-top:42px;text-align:center;color:var(--green);font-size:20px}
+  .check{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;
+    align-items:center;justify-content:center;font-size:14px;font-weight:900;margin-right:7px}
+
+  .detail-title{font-size:22px;margin:28px 0 16px}
+  .table{display:grid;grid-template-columns:170px 1fr 170px 1fr;border-left:1px solid #e2e5e8;border-top:1px solid #e2e5e8}
+  .cell{min-height:62px;padding:15px 14px;display:flex;align-items:center;border-right:1px solid #e2e5e8;border-bottom:1px solid #e2e5e8;font-size:18px;line-height:1.45}
+  .label{background:#f7f8f9;color:#565d65}.value{background:#fff}.wide{grid-column:span 3}
+  .parody{margin-top:18px;border:1px dashed #ccd3da;border-radius:8px;background:#fafbfc;color:#7d8690;text-align:center;
+    padding:9px 12px;font-size:13px;font-weight:800;letter-spacing:.04em}
+
+
+  /* landing */
+  .landing{
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 50% 24%, rgba(67,165,230,.08), transparent 26%),
+      linear-gradient(180deg,#fbfdff 0%,#f7fbfe 60%,#eef8fd 100%);
+    color:#20242a;
+  }
+  .landing-nav{
+    height:68px;display:flex;align-items:center;justify-content:space-between;
+    max-width:1120px;margin:0 auto;padding:0 24px;border-bottom:1px solid rgba(220,228,235,.7)
+  }
+  .landing-logo{font-size:19px;font-weight:850;letter-spacing:-.02em}
+  .landing-logo span{font-size:12px;color:#8b949d;font-weight:600;margin-left:8px}
+  .landing-nav button{
+    border:0;border-radius:9px;padding:10px 16px;background:#2f9de6;color:white;
+    font-weight:800;cursor:pointer
+  }
+  .hero-landing{
+    max-width:920px;margin:0 auto;text-align:center;padding:110px 24px 60px
+  }
+  .hero-emoji{font-size:44px;margin-bottom:18px}
+  .hero-eyebrow{font-size:13px;color:#4a9bcf;font-weight:800;letter-spacing:.08em}
+  /* .hero-landing h1{
+    margin:18px 0 14px;font-size:52px;line-height:1.08;letter-spacing:0.06em
+  } */
+
+  .hero-landing h1 {
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+}
+  .hero-landing p{
+    margin:0 auto;max-width:680px;color:#707983;font-size:18px;line-height:1.8
+  }
+  .landing-cta{
+    margin-top:30px;border:0;border-radius:11px;padding:14px 24px;background:#2f9de6;color:white;
+    font-size:16px;font-weight:850;cursor:pointer;box-shadow:0 10px 24px rgba(47,157,230,.18)
+  }
+  .landing-cta:hover{background:#238fd5}
+  .feature-strip{
+    margin:58px auto 0;max-width:820px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px
+  }
+  .feature-card{
+    background:rgba(255,255,255,.82);border:1px solid #e4ebf1;border-radius:14px;padding:20px;text-align:left;
+    box-shadow:0 8px 30px rgba(60,75,88,.05)
+  }
+  .feature-icon{font-size:22px}.feature-card h3{margin:10px 0 7px;font-size:16px}
+  .feature-card p{margin:0;font-size:13px;line-height:1.65;color:#7b858f}
+  .landing-demo{
+    max-width:980px;margin:12px auto 90px;padding:0 24px
+  }
+  .demo-frame{
+    background:white;border:1px solid #e5ebf0;border-radius:18px;padding:18px;
+    box-shadow:0 24px 60px rgba(41,58,72,.09)
+  }
+  .demo-mini{
+    position:relative;border-radius:12px;background:#eaf6fe;padding:18px 26px 20px;overflow:hidden
+  }
+  .demo-badge{
+    width:180px;margin:-18px auto 18px;background:linear-gradient(180deg,#61bcf0,#2e9fe8);
+    color:white;padding:12px;text-align:center;font-weight:850;
+    clip-path:polygon(0 0,100% 0,92% 100%,8% 100%)
+  }
+  .demo-row{display:flex;justify-content:space-between;gap:16px;color:#49525a;font-size:14px}
+  .demo-success{margin-top:18px;text-align:center;color:#2aa77d;font-weight:700}
+  .landing-content{
+    max-width:760px;margin:0 auto;padding:0 24px 80px
+  }
+  .landing-content section{padding:28px 0;border-top:1px solid #dfe8ee}
+  .landing-content h2{font-size:20px;margin:0 0 12px}
+  .landing-content p{margin:0;color:#6f7a84;line-height:1.85;font-size:14px}
+  .landing-content code{background:#edf5fa;padding:2px 5px;border-radius:5px}
+  .landing-footer{
+    border-top:1px solid #dfe8ee;text-align:center;padding:28px 20px 36px;color:#8d959e;font-size:12px
+  }
+  .hidden{display:none!important}
+
+  @media(max-width:900px){
+    .app{display:block;height:auto;overflow:visible}.sidebar{border-right:0;border-bottom:1px solid var(--line)}
+    .sidebar-resizer{display:none}
+    .workspace{overflow:auto}.toolbar{position:relative}.stage{justify-content:center;padding:24px 14px 60px}
+    .hero-landing{padding-top:72px}.hero-landing h1{font-size:40px}.feature-strip{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<div class="landing" id="landing">
+  <nav class="landing-nav">
+    <div class="landing-logo">Admit Me Anywhere <span>想去哪填哪</span></div>
+    <button id="navStart">开始填写 →</button>
+  </nav>
+
+  <section class="hero-landing">
+   
+    <div class="hero-eyebrow">ADMIT · ME · ANYWHERE</div>
+    <h1>想去哪填哪</h1>
+    <p>
+    真正的录取结果由系统决定，这个不是。<br>  
+    填学校、填专业、填导师、填成绩。<br>    
+    <strong>看看另一条时间线里的你去了哪里。</strong> 
+    </p>
+    <button class="landing-cta" id="heroStart">开始填写我的平行世界 →</button>
+
+    <div class="feature-strip">
+      <div class="feature-card">
+        <div class="feature-icon">🪄</div>
+        <h3>霍格沃茨魔法学校</h3>
+        <p>魔药学 · 西弗勒斯·斯内普</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">💤</div>
+        <h3>摸鱼大学</h3>
+        <p>工作效率管理 · 带薪摸鱼方向</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🛰️</div>
+        <h3>火星理工大学</h3>
+        <p>行星工程 · 火星移民专项</p>
+      </div>
+    </div>
+
+    <p style="margin-top: 18px; text-align: center; color: #8a929c; font-size: 14px;">
+      示例仅供参考，离谱程度不限，欢迎脑洞大开
+    </p>
+  </section>
+
+  <section class="landing-demo">
+    <div class="demo-frame">
+      <div class="demo-mini">
+        <div class="demo-badge">想去哪填哪</div>
+        <div class="demo-row">
+          <strong>霍格沃茨魔法学校</strong>
+          <span>2026-09-25 10:43</span>
+        </div>
+        <div style="margin-top:14px">请在收到本通知后立即完成待录取确认。</div>
+        <div class="demo-success">✓ 你已接受霍格沃茨魔法学校的待录取通知</div>
+      </div>
+    </div>
+  </section>
+
+  <main class="landing-content">
+    <section>
+      <h2>这是什么？</h2>
+      <p>
+        一个没有任何录取权力的录取页面生成器。<br>
+        你填什么，它就显示什么，仅此而已。
+      </p>
+    </section>
+    <section>
+      <h2>数据会上传吗？</h2>
+      <p>
+        不会，你填的内容只存在于当前浏览器里。
+      </p>
+    </section>
+    <section>
+      <h2>和教育部、学信网或高校有关吗？</h2>
+      <p>
+        没有，一个都没有。<br>
+        本项目没有得到教育部、学信网或任何高校的授权、认可或背书。
+      </p>
+    </section>
+    <section>
+      <h2>可以拿来当录取证明吗？</h2>
+      <p>
+        很遗憾，不可以。<br>
+        输出固定带有 <code>虚构内容 · PARODY · 非官方网站</code> 标识，
+        请勿将生成内容用于欺骗或冒充官方材料。
+      </p>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    Admit Me Anywhere · Created by <a href="https://github.com/admit-me-anywhere" target="_blank">admit-me-anywhere</a>
+  </footer>
+</div>
+
+<div class="app hidden" id="editorApp">
+  <aside class="sidebar" id="editorSidebar">
+    <div class="brand">
+      <div>
+        <div class="brand-main">Admit Me Anywhere</div>
+        <div class="brand-sub">想去哪填哪</div>
+      </div>
+    </div>
+
+    <div class="notice">
+      <b>PARODY / 虚构项目</b><br>
+      纯前端、本地生成，不连接任何官方数据库。输出固定保留“虚构内容 · 非官方网站”标识。
+    </div>
+
+    <div class="section">
+      <h3>Header</h3>
+      <div class="twocol">
+        <div class="field"><label>姓名</label><input data-bind="name" value="哈利·波特"></div>
+        <div class="field"><label>复试总成绩</label><input data-bind="score" value="99.75"></div>
+      </div>
+      <div class="field"><label>招生单位</label><input data-bind="school" value="霍格沃茨魔法学校"></div>
+      <div class="twocol">
+        <div class="field"><label>通知时间</label><input data-bind="noticeTime" value="2026-09-25 10:43"></div>
+        <div class="field"><label>接受时间</label><input data-bind="acceptTime" value="2026-09-25 14:07"></div>
+      </div>
+      <div class="field"><label>通知正文</label><textarea data-bind="message">请在收到本通知后立即完成待录取确认。</textarea></div>
+    </div>
+
+    <div class="section">
+      <h3>Details</h3>
+      <div class="twocol">
+        <div class="field"><label>院系所</label><input data-bind="college" value="斯莱特林学院"></div>
+        <div class="field"><label>层次</label><input data-bind="degree" value="硕士"></div>
+      </div>
+      <div class="field"><label>专业</label><input data-bind="major" value="魔药学"></div>
+      <div class="twocol">
+        <div class="field"><label>学习方式</label><input data-bind="study" value="全日制"></div>
+        <div class="field"><label>研究方向</label><input data-bind="direction" value="高级魔药与黑魔法防御"></div>
+      </div>
+      <div class="twocol">
+        <div class="field"><label>导师</label><input data-bind="advisor" value="西弗勒斯·斯内普"></div>
+        <div class="field"><label>专项计划</label><input data-bind="plan" value="魔法部卓越巫师计划"></div>
+      </div>
+      <div class="field"><label>就业类型</label><input data-bind="employment" value="非定向就业"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn secondary" id="reset">恢复默认</button>
+      <button class="btn primary" id="export">导出 PNG</button>
+    </div>
+    <div class="footnote">编辑与预览完全离线可用。PNG 导出会尝试按需加载 html2canvas；加载失败时不影响其他功能。</div>
+  </aside>
+
+  <div class="sidebar-resizer" id="sidebarResizer" role="separator" aria-label="调整编辑栏宽度"
+    aria-controls="editorSidebar" aria-orientation="vertical" aria-valuemin="300" aria-valuemax="680"
+    aria-valuenow="360" tabindex="0" title="拖动调整编辑栏宽度；双击恢复默认宽度"></div>
+
+  <main class="workspace">
+    <div class="toolbar">
+      <div><div class="kicker">PREVIEW</div><div class="hint">预览 · <button id="backHome" style="border:0;background:none;color:#2f9de6;padding:0;cursor:pointer">返回首页</button></div></div>
+      <div class="zoom">
+        <span id="zoomNote" aria-live="polite">100%</span>
+        <span aria-hidden="true">·</span>
+        <button class="zoom-reset" id="zoomReset" type="button" title="恢复默认侧栏宽度和自动缩放">AUTO</button>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="sheet-wrap" id="sheetWrap">
+      <section class="sheet" id="sheet">
+        <div class="hero">
+          <div class="trapezoid-wrap">
+            <svg class="trapezoid-svg" viewBox="0 0 225 62" xmlns="http://www.w3.org/2000/svg" aria-label="想去哪填哪">
+              <defs>
+                <linearGradient id="badgeGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#63bdf2"/>
+                  <stop offset="100%" stop-color="#2e9fe8"/>
+                </linearGradient>
+              </defs>
+              <polygon points="0,0 225,0 207,62 18,62" fill="url(#badgeGradient)"/>
+              <text x="112.5" y="33">想去哪填哪</text>
+            </svg>
+          </div>
+
+          <div class="score">
+            <span class="score-name" data-preview="name">哈利·波特</span>
+            <b>复试总成绩：</b>
+            <span data-preview="score">99.75</span>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="headrow">
+            <span class="school" data-preview="school">霍格沃茨魔法学校</span>
+            <span class="time" data-preview="noticeTime">2026-09-25 10:43</span>
+          </div>
+
+          <div class="msg" data-preview="message">请在收到本通知后立即完成待录取确认。</div>
+
+          <div class="accepted">
+            <span class="check">✓</span>
+            你于<span data-preview="acceptTime">2026-09-25 14:07</span>接受了
+            <span data-preview="school">霍格沃茨魔法学校</span>的待录取通知
+          </div>
+        </div>
+
+        <h2 class="detail-title">志愿详情</h2>
+
+        <div class="table">
+          <div class="cell label">招生单位</div><div class="cell value" data-preview="school">霍格沃茨魔法学校</div>
+          <div class="cell label">层次</div><div class="cell value" data-preview="degree">硕士</div>
+
+          <div class="cell label">院系所</div><div class="cell value" data-preview="college">斯莱特林学院</div>
+          <div class="cell label">专业</div><div class="cell value" data-preview="major">魔药学</div>
+
+          <div class="cell label">学习方式</div><div class="cell value" data-preview="study">全日制</div>
+          <div class="cell label">研究方向</div><div class="cell value" data-preview="direction">高级魔药与黑魔法防御</div>
+
+          <div class="cell label">导师</div><div class="cell value" data-preview="advisor">西弗勒斯·斯内普</div>
+          <div class="cell label">专项计划</div><div class="cell value" data-preview="plan">魔法部卓越巫师计划</div>
+
+          <div class="cell label">就业类型</div><div class="cell value wide" data-preview="employment">非定向就业</div>
+        </div>
+
+        <div class="parody">虚构内容 · PARODY · 非官方网站</div>
+      </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+
+const landing = document.getElementById("landing");
+const editorApp = document.getElementById("editorApp");
+
+function openEditor(){
+  landing.classList.add("hidden");
+  editorApp.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => {
+    if (typeof fitPreview === "function") fitPreview();
+  }, 0);
+}
+function openLanding(){
+  editorApp.classList.add("hidden");
+  landing.classList.remove("hidden");
+  document.body.style.overflow = "";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+document.getElementById("navStart").addEventListener("click", openEditor);
+document.getElementById("heroStart").addEventListener("click", openEditor);
+document.getElementById("backHome").addEventListener("click", openLanding);
+
+const defaults={
+  name:"哈利·波特",score:"99.75",school:"霍格沃茨魔法学校",
+  noticeTime:"2026-09-25 10:43",acceptTime:"2026-09-25 14:07",
+  message:"请在收到本通知后立即完成待录取确认。",college:"斯莱特林学院",degree:"硕士",
+  major:"魔药学",study:"全日制",direction:"高级魔药与黑魔法防御",
+  advisor:"西弗勒斯·斯内普",plan:"魔法部卓越巫师计划",employment:"非定向就业"
+};
+const inputs=[...document.querySelectorAll("[data-bind]")];
+function sync(key,val){
+  document.querySelectorAll(`[data-preview="${key}"]`).forEach(n=>n.textContent=val||" ");
+  requestAnimationFrame(fitPreview);
+}
+inputs.forEach(el=>el.addEventListener("input",e=>sync(e.target.dataset.bind,e.target.value)));
+document.getElementById("reset").onclick=()=>inputs.forEach(el=>{el.value=defaults[el.dataset.bind]??"";sync(el.dataset.bind,el.value)});
+
+
+const workspace = document.querySelector(".workspace");
+const stage = document.getElementById("stage");
+const sheet = document.getElementById("sheet");
+const sheetWrap = document.getElementById("sheetWrap");
+const zoomNote = document.getElementById("zoomNote");
+const zoomReset = document.getElementById("zoomReset");
+const sidebar = document.getElementById("editorSidebar");
+const sidebarResizer = document.getElementById("sidebarResizer");
+const desktopLayout = window.matchMedia("(min-width: 901px)");
+const SIDEBAR_MIN = 300;
+const SIDEBAR_MAX = 680;
+const SIDEBAR_DEFAULT = 360;
+let sidebarWidth = SIDEBAR_DEFAULT;
+let sidebarResizeStartX = 0;
+let sidebarResizeStartWidth = 0;
+let isSidebarResizing = false;
+
+function getSidebarMaximum(){
+  return Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, window.innerWidth - 420));
+}
+
+function setSidebarWidth(nextWidth){
+  const maximum = getSidebarMaximum();
+  sidebarWidth = Math.round(Math.min(maximum, Math.max(SIDEBAR_MIN, nextWidth)));
+  editorApp.style.setProperty("--sidebar-width", `${sidebarWidth}px`);
+  sidebarResizer.setAttribute("aria-valuemax", String(maximum));
+  sidebarResizer.setAttribute("aria-valuenow", String(sidebarWidth));
+  requestAnimationFrame(fitPreview);
+}
+
+function finishSidebarResize(event){
+  if(!isSidebarResizing)return;
+  isSidebarResizing=false;
+  editorApp.classList.remove("is-resizing");
+  if(event && sidebarResizer.hasPointerCapture(event.pointerId)){
+    sidebarResizer.releasePointerCapture(event.pointerId);
+  }
+}
+
+sidebarResizer.addEventListener("pointerdown",event=>{
+  if(!desktopLayout.matches)return;
+  isSidebarResizing=true;
+  sidebarResizeStartX=event.clientX;
+  sidebarResizeStartWidth=sidebar.getBoundingClientRect().width;
+  sidebarResizer.setPointerCapture(event.pointerId);
+  editorApp.classList.add("is-resizing");
+  event.preventDefault();
+});
+window.addEventListener("pointermove",event=>{
+  if(!isSidebarResizing)return;
+  setSidebarWidth(sidebarResizeStartWidth + event.clientX - sidebarResizeStartX);
+});
+window.addEventListener("pointerup",finishSidebarResize);
+window.addEventListener("pointercancel",finishSidebarResize);
+sidebarResizer.addEventListener("dblclick",()=>setSidebarWidth(SIDEBAR_DEFAULT));
+zoomReset.addEventListener("click",()=>setSidebarWidth(SIDEBAR_DEFAULT));
+sidebarResizer.addEventListener("keydown",event=>{
+  const step=event.shiftKey?50:10;
+  let nextWidth=null;
+  if(event.key==="ArrowLeft")nextWidth=sidebarWidth-step;
+  if(event.key==="ArrowRight")nextWidth=sidebarWidth+step;
+  if(event.key==="Home")nextWidth=SIDEBAR_MIN;
+  if(event.key==="End")nextWidth=getSidebarMaximum();
+  if(nextWidth===null)return;
+  event.preventDefault();
+  setSidebarWidth(nextWidth);
+});
+
+sidebarResizer.setAttribute("aria-valuemax", String(getSidebarMaximum()));
+window.addEventListener("resize",()=>{
+  if(desktopLayout.matches)setSidebarWidth(sidebarWidth);
+});
+
+function fitPreview(){
+  // Keep the preview's native design at 1080 px and scale the whole thing,
+  // instead of squeezing individual table cells.
+  const nativeWidth = 1080;
+  const styles = getComputedStyle(stage);
+  const horizontalPadding =
+    parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0);
+
+  const available = Math.max(280, workspace.clientWidth - horizontalPadding);
+  const scale = Math.min(1, available / nativeWidth);
+
+  sheet.style.transform = `scale(${scale})`;
+
+  // CSS transforms don't alter layout dimensions, so make the wrapper
+  // occupy exactly the scaled visual footprint.
+  sheetWrap.style.width = `${nativeWidth * scale}px`;
+  sheetWrap.style.height = `${sheet.offsetHeight * scale}px`;
+
+  zoomNote.textContent = `${Math.round(scale * 100)}%`;
+}
+
+const previewResizeObserver = new ResizeObserver(() => {
+  requestAnimationFrame(fitPreview);
+});
+previewResizeObserver.observe(workspace);
+previewResizeObserver.observe(sheet);
+
+window.addEventListener("load", fitPreview);
+window.addEventListener("resize", fitPreview);
+
+async function ensureHtml2Canvas(){
+  if(window.html2canvas)return true;
+  return new Promise(resolve=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    s.onload=()=>resolve(true);s.onerror=()=>resolve(false);document.head.appendChild(s);
+  });
+}
+document.getElementById("export").onclick=async()=>{
+  const btn=document.getElementById("export");const old=btn.textContent;btn.textContent="生成中…";btn.disabled=true;
+  const ok=await ensureHtml2Canvas();
+  if(!ok){alert("无法加载 PNG 导出组件；编辑与预览仍可正常使用。");btn.textContent=old;btn.disabled=false;return;}
+  try{
+    const oldTransform = sheet.style.transform;
+    sheet.style.transform = "none";
+    const canvas=await html2canvas(sheet,{scale:2,backgroundColor:"#fff",useCORS:true,foreignObjectRendering:false});
+    sheet.style.transform = oldTransform;
+    const a=document.createElement("a");a.download="admit-me-anywhere.png";a.href=canvas.toDataURL("image/png");a.click();
+    fitPreview();
+  }catch(e){
+    fitPreview();
+    console.error(e);
+    alert("导出失败，请查看浏览器控制台。");
+  }
+  btn.textContent=old;btn.disabled=false;
+};
+</script>
+</body>
+</html>
